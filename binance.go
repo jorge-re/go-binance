@@ -43,7 +43,8 @@ type Binance interface {
 	OpenOrders(oor OpenOrdersRequest) ([]*ExecutedOrder, error)
 	// AllOrders returns list of all previous orders.
 	AllOrders(aor AllOrdersRequest) ([]*ExecutedOrder, error)
-
+	// MarginAccount returns account data.
+	MarginAccount(ar AccountRequest) (*MarginAccount, error)
 	// Account returns account data.
 	Account(ar AccountRequest) (*Account, error)
 	// MyTrades list user's trades.
@@ -55,6 +56,10 @@ type Binance interface {
 	// WithdrawHistory lists withdraw data.
 	WithdrawHistory(hr HistoryRequest) ([]*Withdrawal, error)
 
+	// Margin trading
+	Borrow(bor BorrowRequest)
+	Repay(bor BorrowRequest)
+	MarginNewOrder(nor NewOrderRequest) (*ProcessedOrder, error)
 	// StartUserDataStream starts stream and returns Stream with ListenKey.
 	StartUserDataStream() (*Stream, error)
 	// KeepAliveUserDataStream prolongs stream livespan.
@@ -254,6 +259,59 @@ func (b *binance) TickerAllBooks() ([]*BookTicker, error) {
 	return b.Service.TickerAllBooks()
 }
 
+// Margin structs
+// asset	STRING	YES
+// amount	DECIMAL	YES
+// recvWindow	LONG	NO
+// timestamp	LONG	YES
+type BorrowRequest struct {
+	Asset						string
+	Amount 					float64
+	RecvWindow 			time.Duration
+	Timestamp				time.Time
+}
+
+func (b *binance) Borrow(bor BorrowRequest){
+	b.Service.Borrow(bor)
+	return
+}
+
+func (b *binance) Repay(bor BorrowRequest){
+	b.Service.Repay(bor)
+	return
+}
+
+
+// Margin NewOrderRequestMargin represents NewOrder request data.
+// Name	Type	Mandatory	Description
+// symbol	STRING	YES
+// side	ENUM	YES
+// type	ENUM	YES
+// timeInForce	ENUM	NO
+// quantity	DECIMAL	NO
+// quoteOrderQty	DECIMAL	NO
+// price	DECIMAL	NO
+// newClientOrderId	STRING	NO	A unique id for the order. Automatically generated if not sent.
+// stopPrice	DECIMAL	NO	Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders.
+// icebergQty	DECIMAL	NO	Used with LIMIT, STOP_LOSS_LIMIT, and TAKE_PROFIT_LIMIT to create an iceberg order.
+// newOrderRespType	ENUM	NO	Set the response JSON. ACK, RESULT, or FULL; MARKET and LIMIT order types default to FULL, all other orders default to ACK.
+// recvWindow	LONG	NO	The value cannot be greater than 60000
+// timestamp	LONG	YES
+type NewOrderRequestMargin struct {
+	Symbol           string
+	Side             OrderSide
+	Type             OrderType
+	TimeInForce      TimeInForce
+	Quantity         float64
+	QuoteOrderQty		 float64
+	Price            float64
+	NewClientOrderID string
+	StopPrice        float64
+	IcebergQty       float64
+	RecvWindow 			 time.Duration
+	Timestamp        time.Time
+}
+
 // NewOrderRequest represents NewOrder request data.
 type NewOrderRequest struct {
 	Symbol           string
@@ -266,6 +324,7 @@ type NewOrderRequest struct {
 	StopPrice        float64
 	IcebergQty       float64
 	Timestamp        time.Time
+	RecvWindow 			 time.Duration
 }
 
 // ProcessedOrder represents data from processed order.
@@ -276,9 +335,15 @@ type ProcessedOrder struct {
 	TransactTime  time.Time
 }
 
+
 // NewOrder places new order and returns ProcessedOrder.
 func (b *binance) NewOrder(nor NewOrderRequest) (*ProcessedOrder, error) {
 	return b.Service.NewOrder(nor)
+}
+
+// Margin NewOrder
+func (b *binance) MarginNewOrder(nor NewOrderRequest) (*ProcessedOrder, error) {
+	return b.Service.MarginNewOrder(nor)
 }
 
 // NewOrder places testing order.
@@ -372,6 +437,26 @@ type AccountRequest struct {
 	Timestamp  time.Time
 }
 
+type MarginAccount struct {
+	BorrowEnabled    		bool
+	MarginLevel  				float64
+	TotalAssetOfBtc  		float64
+	TotalLiabilityOfBtc float64
+	TotalNetAssetOfBtc  float64
+	TradeEnabled      	bool
+	TransferEnabled     bool
+	UserAssets 					[]*UserAsset
+}
+
+type UserAsset struct {
+	Asset  		string
+	Borrowed 	float64
+	Free   		float64
+	Interest 	float64
+	Locked 		float64
+	NetAsset 	float64
+}
+
 // Account represents user's account information.
 type Account struct {
 	MakerCommision  int64
@@ -394,6 +479,11 @@ type Balance struct {
 	Asset  string
 	Free   float64
 	Locked float64
+}
+
+// Account returns account data.
+func (b *binance) MarginAccount(ar AccountRequest) (*MarginAccount, error) {
+	return b.Service.MarginAccount(ar)
 }
 
 // Account returns account data.

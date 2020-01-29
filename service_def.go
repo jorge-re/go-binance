@@ -32,6 +32,11 @@ type Service interface {
 	OpenOrders(oor OpenOrdersRequest) ([]*ExecutedOrder, error)
 	AllOrders(aor AllOrdersRequest) ([]*ExecutedOrder, error)
 
+  MarginAccount(ar AccountRequest) (*MarginAccount, error)
+	MarginNewOrder(or NewOrderRequest) (*ProcessedOrder, error)
+	Borrow(bor BorrowRequest)
+	Repay(bor BorrowRequest)
+
 	Account(ar AccountRequest) (*Account, error)
 	MyTrades(mtr MyTradesRequest) ([]*Trade, error)
 	Withdraw(wr WithdrawRequest) (*WithdrawResult, error)
